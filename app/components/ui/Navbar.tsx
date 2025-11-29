@@ -75,7 +75,7 @@ export function Navbar({ showBrand = true }: NavbarProps) {
 											delay: 0.2,
 										}}
 									>
-										Kimu
+										VIVID
 									</motion.span>
 								)}
 							</AnimatePresence>

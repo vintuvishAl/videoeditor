@@ -12,6 +12,7 @@ import {
 	ChevronRight,
 	RotateCcw,
 } from "lucide-react";
+import { VividLogo } from "~/components/ui/VividLogo";
 import { Button } from "~/components/ui/button";
 import {
 	type MediaBinItem,
@@ -409,8 +410,8 @@ export function ChatBox({
 			{/* Chat Header */}
 			<div className="h-9 border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex items-center justify-between px-3 shrink-0">
 				<div className="flex items-center gap-2">
-					<Bot className="h-3.5 w-3.5 text-muted-foreground" />
-					<span className="text-sm font-medium tracking-tight">Ask Kimu</span>
+					<VividLogo className="w-4 h-4 text-foreground" showText={false} />
+					<span className="text-sm font-medium tracking-tight">Ask Vivid</span>
 				</div>
 
 				<div className="flex items-center gap-2">
@@ -446,12 +447,12 @@ export function ChatBox({
 				{messages.length === 0 ? (
 					// Default clean state - Copilot style
 					<div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
-						<div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-							<Bot className="h-6 w-6 text-primary" />
+						<div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
+							<VividLogo className="w-6 h-6 text-primary" showText={false} />
 						</div>
-						<h2 className="text-lg font-semibold mb-2">Ask Kimu</h2>
+						<h2 className="text-lg font-semibold mb-2">Ask Vivid</h2>
 						<p className="text-sm text-muted-foreground mb-8 max-w-xs leading-relaxed">
-							Kimu is your AI assistant for video editing. Ask questions, get
+							Vivid is your AI assistant for video editing. Ask questions, get
 							help with timeline operations, or request specific edits.
 						</p>
 						<div className="space-y-2 text-xs text-muted-foreground">
@@ -637,7 +638,7 @@ export function ChatBox({
 						value={inputValue}
 						onChange={handleInputChange}
 						onKeyDown={handleKeyPress}
-						placeholder="Ask Kimu..."
+						placeholder="Ask Vivid..."
 						className={cn(
 							"w-full min-h-8 max-h-20 resize-none text-xs bg-transparent border-0 px-3 pt-2.5 pb-1 placeholder:text-muted-foreground/60 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50",
 							"transition-all duration-200 leading-relaxed"

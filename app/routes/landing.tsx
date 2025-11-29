@@ -522,7 +522,7 @@ export default function Landing() {
 								<div className="h-12 bg-muted/10 border-b border-border/20 hidden sm:flex items-center px-6 text-sm relative z-10">
 									<div className="flex items-center gap-2 mr-8">
 										<VividLogo className="w-5 h-5 text-foreground" showText={false} />
-										<span className="font-medium">Vivid Studio</span>
+										<span className="font-extrabold text-xs uppercase tracking-widest">VIVID STUDIO</span>
 									</div>
 
 									<div className="flex items-center gap-6 text-muted-foreground text-xs">
@@ -1585,7 +1585,7 @@ function MobileVideoEditorPreview({
 							<div className="h-8 bg-muted/10 border-b border-border/20 flex items-center px-4">
 								<div className="flex items-center gap-2">
 									<VividLogo className="w-4 h-4 text-foreground" showText={false} />
-									<span className="text-xs font-semibold text-foreground">Vivid Studio</span>
+									<span className="text-[10px] font-extrabold uppercase tracking-widest text-foreground">VIVID STUDIO</span>
 								</div>
 								<div className="flex-1" />
 								<div className="flex items-center gap-3 text-xs text-muted-foreground">
@@ -1803,7 +1803,7 @@ function MobileVideoEditorPreview({
 								</motion.div>
 							)}
 							<p className="text-xs leading-relaxed mt-3 text-white/20">
-								Get notified when Kimu launches. No spam, just updates on the future of video editing.
+								Get notified when Vivid launches. No spam, just updates on the future of video editing.
 							</p>
 						</div>
 					</div>
