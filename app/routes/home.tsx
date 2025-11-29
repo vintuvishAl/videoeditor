@@ -1,41 +1,16 @@
 import React, { useRef, useEffect, useCallback, useState } from "react";
 import type { PlayerRef, CallbackListener } from "@remotion/player";
-import {
-	Play,
-	Pause,
-	Upload,
-	Download,
-	Settings,
-	Plus,
-	Minus,
-	Scissors,
-	Star,
-	Bot,
-	LogOut,
-	Save as SaveIcon,
-	ChevronRight,
-	CornerUpLeft,
-	CornerUpRight,
-} from "lucide-react";
-
-// Custom video controls
-import { MuteButton, FullscreenButton } from "~/components/ui/video-controls";
 
 // Components
 import LeftPanel from "~/components/editor/LeftPanel";
-import { VideoPlayer } from "~/video-compositions/VideoPlayer";
 import { RenderStatus } from "~/components/timeline/RenderStatus";
-import { TimelineRuler } from "~/components/timeline/TimelineRuler";
-import { TimelineTracks } from "~/components/timeline/TimelineTracks";
-import { Button } from "~/components/ui/button";
-import { ProfileMenu } from "~/components/ui/ProfileMenu";
-import { Badge } from "~/components/ui/badge";
-import { Separator } from "~/components/ui/separator";
-import { Switch } from "~/components/ui/switch";
-import { Label } from "~/components/ui/label";
-import { Input } from "~/components/ui/input";
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "~/components/ui/resizable";
 import { toast } from "sonner";
+
+// New Components
+import { TopBar } from "~/components/editor/TopBar";
+import { PreviewArea } from "~/components/editor/PreviewArea";
+import { TimelineArea } from "~/components/editor/TimelineArea";
 
 // Hooks
 import { useTimeline } from "~/hooks/useTimeline";
@@ -47,14 +22,11 @@ import { useRenderer } from "~/hooks/useRenderer";
 import {
 	FPS,
 	type MediaBinItem,
-	type TimelineDataItem,
 	type Transition,
-	type TrackState,
 	type ScrubberState,
 } from "~/components/timeline/types";
 import { useNavigate, useParams } from "react-router";
 import { ChatBox } from "~/components/chat/ChatBox";
-import { VividLogo } from "~/components/ui/VividLogo";
 import { useAuth } from "~/hooks/useAuth";
 import { AuthOverlay } from "~/components/ui/AuthOverlay";
 import { useQuery, useMutation, useAction } from "convex/react";
@@ -90,8 +62,6 @@ export default function TimelineEditor() {
 	// Text fields for width/height to allow clearing while typing
 	const [widthInput, setWidthInput] = useState<string>("1920");
 	const [heightInput, setHeightInput] = useState<string>("1080");
-	const widthInputRef = useRef<HTMLInputElement>(null);
-	const heightInputRef = useRef<HTMLInputElement>(null);
 
 	// Keep inputs in sync if width/height change elsewhere
 	useEffect(() => {
@@ -105,7 +75,6 @@ export default function TimelineEditor() {
 
 	const [chatMessages, setChatMessages] = useState<Message[]>([]);
 	const [starCount, setStarCount] = useState<number | null>(null);
-	// Avoid initial blank render; don't delay render on a 'mounted' gate
 
 	const [selectedScrubberIds, setSelectedScrubberIds] = useState<string[]>([]);
 
@@ -140,6 +109,7 @@ export default function TimelineEditor() {
 		getConnectedElements,
 		handleUpdateScrubberWithLocking,
 		setTimelineFromServer,
+		setResolution,
 		// undo/redo
 		undo,
 		redo,
@@ -147,6 +117,18 @@ export default function TimelineEditor() {
 		canRedo,
 		snapshotTimeline,
 	} = useTimeline(projectId);
+
+	// Sync width/height with resolution mode
+	useEffect(() => {
+		if (timeline.resolution === "shorts") {
+			setWidth(1080);
+			setHeight(1920);
+		} else {
+			// Default to 4K (or if resolution is "4k")
+			setWidth(3840);
+			setHeight(2160);
+		}
+	}, [timeline.resolution]);
 
 	const {
 		mediaBinItems,
@@ -393,16 +375,6 @@ export default function TimelineEditor() {
 		[handleAddMediaToBin],
 	);
 
-	const handleRenderClick = useCallback(() => {
-		if (timelineData.length === 0 || timelineData.every((item) => item.scrubbers.length === 0)) {
-			toast.error("No timeline to render. Add some media first!");
-			return;
-		}
-
-		handleRenderVideo(getTimelineData, timeline, isAutoSize ? null : width, isAutoSize ? null : height, getPixelsPerSecond);
-		toast.info("Starting render...");
-	}, [handleRenderVideo, getTimelineData, timeline, width, height, isAutoSize, timelineData, getPixelsPerSecond]);
-
 	const handleLogTimelineData = useCallback(() => {
 		if (timelineData.length === 0) {
 			toast.error("Timeline is empty");
@@ -411,36 +383,6 @@ export default function TimelineEditor() {
 		console.log(JSON.stringify(getTimelineData(), null, 2));
 		toast.success("Timeline data logged to console");
 	}, [getTimelineData, timelineData]);
-
-	const handleWidthChange = useCallback((newWidth: number) => {
-		setWidth(newWidth);
-	}, []);
-
-	const handleHeightChange = useCallback((newHeight: number) => {
-		setHeight(newHeight);
-	}, []);
-
-	const commitWidth = useCallback(() => {
-		const parsed = Number(widthInput);
-		const safe = !isFinite(parsed) || parsed <= 0 ? 1920 : parsed;
-		setWidth(safe);
-		setWidthInput(String(safe));
-	}, [widthInput]);
-
-	const commitHeight = useCallback(() => {
-		const parsed = Number(heightInput);
-		const safe = !isFinite(parsed) || parsed <= 0 ? 1080 : parsed;
-		setHeight(safe);
-		setHeightInput(String(safe));
-	}, [heightInput]);
-
-	const handleAutoSizeChange = useCallback((auto: boolean) => {
-		setIsAutoSize(auto);
-	}, []);
-
-	const handleAddTextClick = useCallback(() => {
-		navigate("/editor/text-editor");
-	}, [navigate]);
 
 	const handleAddTrackClick = useCallback(() => {
 		handleAddTrack();
@@ -674,60 +616,17 @@ export default function TimelineEditor() {
 				}
 				setSelectedItem(null);
 			}}>
-			{/* Ultra-minimal Top Bar */}
-			<header className="h-9 border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 flex items-center justify-between px-3 shrink-0">
-				<div className="flex items-center gap-2">
-					<VividLogo className="h-6 w-6" showText={false} />
-					<span className="font-semibold">Vivid Studio</span>
-				</div>
-
-				{/* Center project name */}
-				<div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2">
-					<span className="text-xs leading-none text-muted-foreground font-mono">{projectName || "Project"}</span>
-				</div>
-
-				<div className="flex items-center gap-1">
-					{/* Save / Import / Export */}
-					<Button
-						variant="ghost"
-						size="sm"
-						onClick={handleSaveTimeline}
-						className="h-7 px-2 text-xs"
-						title="Save timeline (Ctrl/Cmd+S)">
-						<SaveIcon className="h-3 w-3 mr-1" />
-						Save
-					</Button>
-
-					<Button variant="ghost" size="sm" onClick={handleAddMediaClick} className="h-7 px-2 text-xs">
-						<Upload className="h-3 w-3 mr-1" />
-						Import
-					</Button>
-
-					<Button
-						variant="default"
-						size="sm"
-						onClick={handleRender} // Changed to new handleRender
-						disabled={isRendering}
-						className="h-7 px-2 text-xs">
-						<Download className="h-3 w-3 mr-1" />
-						{isRendering ? "Rendering..." : "Export"}
-					</Button>
-
-					{/* Auth status — keep avatar as the last item (right corner) */}
-					{user ? (
-						<ProfileMenu user={user} starCount={starCount} onSignOut={signOut} />
-					) : (
-						<Button
-							variant="ghost"
-							size="sm"
-							onClick={signInWithGoogle}
-							className="h-7 px-2 text-xs ml-1"
-							title="Sign in with Google">
-							Sign in
-						</Button>
-					)}
-				</div>
-			</header>
+			<TopBar
+				projectName={projectName}
+				onSave={handleSaveTimeline}
+				onImport={handleAddMediaClick}
+				onExport={handleRender}
+				isExporting={isRendering}
+				user={user}
+				starCount={starCount}
+				onSignIn={signInWithGoogle}
+				onSignOut={signOut}
+			/>
 
 			{/* Main content: Left panel full height, center preview+timeline, right chat always visible */}
 			<ResizablePanelGroup direction="horizontal" className="flex-1">
@@ -755,241 +654,67 @@ export default function TimelineEditor() {
 					<ResizablePanelGroup direction="vertical">
 						{/* Preview Area */}
 						<ResizablePanel defaultSize={65} minSize={40}>
-							<div className="h-full flex flex-col bg-background">
-								{/* Compact Top Bar */}
-								<div className="h-8 border-b border-border/50 bg-muted/30 flex items-center justify-between px-3 shrink-0">
-									<div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-										<span>Resolution:</span>
-										<div className="flex items-center gap-1">
-											<Input
-												type="number"
-												value={widthInput}
-												onChange={(e) => {
-													setWidthInput(e.target.value);
-													const n = Number(e.target.value);
-													if (isFinite(n) && n > 0) setWidth(n);
-												}}
-												onBlur={commitWidth}
-												onKeyDown={(e) => {
-													if (e.key === "Enter") {
-														commitWidth();
-														(e.currentTarget as HTMLInputElement).blur();
-													}
-												}}
-												disabled={isAutoSize}
-												className="h-5 w-14 text-xs px-1 border-0 bg-muted/50"
-												ref={widthInputRef}
-											/>
-											<span>×</span>
-											<Input
-												type="number"
-												value={heightInput}
-												onChange={(e) => {
-													setHeightInput(e.target.value);
-													const n = Number(e.target.value);
-													if (isFinite(n) && n > 0) setHeight(n);
-												}}
-												onBlur={commitHeight}
-												onKeyDown={(e) => {
-													if (e.key === "Enter") {
-														commitHeight();
-														(e.currentTarget as HTMLInputElement).blur();
-													}
-												}}
-												disabled={isAutoSize}
-												className="h-5 w-14 text-xs px-1 border-0 bg-muted/50"
-												ref={heightInputRef}
-											/>
-										</div>
-									</div>
-
-									<div className="flex items-center gap-1">
-										<div className="flex items-center gap-1">
-											<Switch
-												id="auto-size"
-												checked={isAutoSize}
-												onCheckedChange={handleAutoSizeChange}
-												className="scale-75"
-											/>
-											<Label htmlFor="auto-size" className="text-xs">
-												Auto
-											</Label>
-										</div>
-
-										{!isChatMinimized && null}
-										{isChatMinimized && (
-											<>
-												<Separator orientation="vertical" className="h-4 mx-1" />
-												<Button
-													variant="ghost"
-													size="sm"
-													onClick={() => setIsChatMinimized(false)}
-													className="h-6 w-6 p-0 text-primary"
-													title="Open Chat">
-													<VividLogo className="h-3 w-3" showText={false} />
-												</Button>
-											</>
-										)}
-									</div>
-								</div>
-
-								{/* Video Preview */}
-								<div
-									className={
-										"flex-1 bg-zinc-200/70 dark:bg-zinc-900 " +
-										"flex flex-col items-center justify-center p-3 border border-border/50 rounded-lg overflow-hidden shadow-2xl relative"
-									}>
-									<div className="flex-1 flex items-center justify-center w-full">
-										<VideoPlayer
-											timelineData={timelineData}
-											durationInFrames={durationInFrames}
-											ref={playerRef}
-											compositionWidth={isAutoSize ? null : width}
-											compositionHeight={isAutoSize ? null : height}
-											timeline={timeline}
-											handleUpdateScrubber={handleUpdateScrubber}
-											selectedItem={selectedItem}
-											setSelectedItem={setSelectedItem}
-											getPixelsPerSecond={getPixelsPerSecond}
-										/>
-									</div>
-
-									{/* Custom Video Controls - Below Player */}
-									<div className="w-full flex items-center justify-center gap-2 mt-3 px-4">
-										{/* Left side controls */}
-										<div className="flex items-center gap-1">
-											<MuteButton playerRef={playerRef} />
-										</div>
-
-										{/* Center play/pause button */}
-										<div className="flex items-center">
-											<Button variant="ghost" size="sm" onClick={togglePlayback} className="h-6 w-6 p-0">
-												{isPlaying ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
-											</Button>
-										</div>
-
-										{/* Right side controls */}
-										<div className="flex items-center gap-1">
-											<FullscreenButton playerRef={playerRef} />
-										</div>
-									</div>
-								</div>
-							</div>
+							<PreviewArea
+								timeline={timeline}
+								setResolution={setResolution}
+								isAutoSize={isAutoSize}
+								setIsAutoSize={setIsAutoSize}
+								isChatMinimized={isChatMinimized}
+								setIsChatMinimized={setIsChatMinimized}
+								timelineData={timelineData}
+								durationInFrames={durationInFrames}
+								playerRef={playerRef}
+								width={width}
+								height={height}
+								handleUpdateScrubber={handleUpdateScrubber}
+								selectedItem={selectedItem}
+								setSelectedItem={setSelectedItem}
+								getPixelsPerSecond={getPixelsPerSecond}
+								isPlaying={isPlaying}
+								togglePlayback={togglePlayback}
+							/>
 						</ResizablePanel>
 
 						<ResizableHandle withHandle />
 
 						{/* Timeline Area */}
 						<ResizablePanel defaultSize={35} minSize={25}>
-							<div className="h-full flex flex-col bg-muted/20">
-								<div className="h-8 border-b border-border/50 bg-muted/30 flex items-center justify-between px-3 shrink-0">
-									<div className="flex items-center gap-2">
-										<span className="text-xs font-medium">Timeline</span>
-										<Badge variant="outline" className="text-xs h-4 px-1.5 font-mono">
-											{Math.round(((durationInFrames || 0) / FPS) * 10) / 10}s
-										</Badge>
-										<Button
-											variant="ghost"
-											size="sm"
-											onClick={undo}
-											disabled={!canUndo}
-											className="h-6 w-6 p-0"
-											title="Undo (Ctrl/Cmd+Z)">
-											<CornerUpLeft className="h-3 w-3" />
-										</Button>
-										<Button
-											variant="ghost"
-											size="sm"
-											onClick={redo}
-											disabled={!canRedo}
-											className="h-6 w-6 p-0"
-											title="Redo (Ctrl/Cmd+Shift+Z)">
-											<CornerUpRight className="h-3 w-3" />
-										</Button>
-									</div>
-									<div className="flex items-center gap-1">
-										<div className="flex items-center">
-											<Button
-												variant="ghost"
-												size="sm"
-												onClick={handleZoomOut}
-												className="h-6 w-6 p-0 text-xs"
-												title="Zoom Out">
-												<Minus className="h-3 w-3" />
-											</Button>
-											<Badge
-												variant="secondary"
-												className="text-xs h-4 px-1.5 font-mono cursor-pointer hover:bg-secondary/80 transition-colors"
-												onClick={handleZoomReset}
-												title="Click to reset zoom to 100%">
-												{Math.round(zoomLevel * 100)}%
-											</Badge>
-											<Button
-												variant="ghost"
-												size="sm"
-												onClick={handleZoomIn}
-												className="h-6 w-6 p-0 text-xs"
-												title="Zoom In">
-												<Plus className="h-3 w-3" />
-											</Button>
-										</div>
-										<Separator orientation="vertical" className="h-4 mx-1" />
-										<Button variant="ghost" size="sm" onClick={handleAddTrackClick} className="h-6 px-2 text-xs">
-											<Plus className="h-3 w-3 mr-1" />
-											Track
-										</Button>
-										<Separator orientation="vertical" className="h-4 mx-1" />
-										<Button
-											variant="ghost"
-											size="sm"
-											onClick={handleSplitClick}
-											className="h-6 px-2 text-xs"
-											title="Split selected scrubber at ruler position">
-											<Scissors className="h-3 w-3 mr-1" />
-											Split
-										</Button>
-										<Separator orientation="vertical" className="h-4 mx-1" />
-										<Button variant="ghost" size="sm" onClick={handleLogTimelineData} className="h-6 px-2 text-xs">
-											<Settings className="h-3 w-3 mr-1" />
-											Debug
-										</Button>
-									</div>
-								</div>
-
-								<TimelineRuler
-									timelineWidth={timelineWidth}
-									rulerPositionPx={rulerPositionPx}
-									containerRef={containerRef}
-									onRulerDrag={handleRulerDrag}
-									onRulerMouseDown={handleRulerMouseDown}
-									pixelsPerSecond={getPixelsPerSecond()}
-									scrollLeft={containerRef.current?.scrollLeft || 0}
-								/>
-
-								<TimelineTracks
-									timeline={timeline}
-									timelineWidth={timelineWidth}
-									rulerPositionPx={rulerPositionPx}
-									containerRef={containerRef}
-									onScroll={handleScrollCallback}
-									onDeleteTrack={handleDeleteTrack}
-									onUpdateScrubber={handleUpdateScrubberWithLocking}
-									onDeleteScrubber={handleDeleteScrubber}
-									onDropOnTrack={handleDropOnTrack}
-									onDropTransitionOnTrack={handleDropTransitionOnTrackWrapper}
-									onDeleteTransition={handleDeleteTransition}
-									getAllScrubbers={getAllScrubbers}
-									expandTimeline={expandTimelineCallback}
-									onRulerMouseDown={handleRulerMouseDown}
-									pixelsPerSecond={getPixelsPerSecond()}
-									selectedScrubberIds={selectedScrubberIds}
-									onSelectScrubber={handleSelectScrubber}
-									onGroupScrubbers={handleGroupSelected}
-									onUngroupScrubber={handleUngroupSelected}
-									onMoveToMediaBin={handleMoveToMediaBinSelected}
-									onBeginScrubberTransform={snapshotTimeline}
-								/>
-							</div>
+							<TimelineArea
+								durationInFrames={durationInFrames}
+								pixelsPerSecond={getPixelsPerSecond()}
+								timelineWidth={timelineWidth}
+								zoomLevel={zoomLevel}
+								onZoomIn={handleZoomIn}
+								onZoomOut={handleZoomOut}
+								onZoomReset={handleZoomReset}
+								undo={undo}
+								redo={redo}
+								canUndo={canUndo}
+								canRedo={canRedo}
+								onAddTrack={handleAddTrackClick}
+								onSplit={handleSplitClick}
+								onDebug={handleLogTimelineData}
+								containerRef={containerRef}
+								rulerPositionPx={rulerPositionPx}
+								onRulerDrag={handleRulerDrag}
+								onRulerMouseDown={handleRulerMouseDown}
+								timeline={timeline}
+								onScroll={handleScrollCallback}
+								onDeleteTrack={handleDeleteTrack}
+								onUpdateScrubber={handleUpdateScrubberWithLocking}
+								onDeleteScrubber={handleDeleteScrubber}
+								onDropOnTrack={handleDropOnTrack}
+								onDropTransition={handleDropTransitionOnTrackWrapper}
+								onDeleteTransition={handleDeleteTransition}
+								getAllScrubbers={getAllScrubbers}
+								expandTimeline={expandTimelineCallback}
+								selectedScrubberIds={selectedScrubberIds}
+								onSelectScrubber={handleSelectScrubber}
+								onGroupScrubbers={handleGroupSelected}
+								onUngroupScrubber={handleUngroupSelected}
+								onMoveToMediaBin={handleMoveToMediaBinSelected}
+								onSnapshot={snapshotTimeline}
+							/>
 						</ResizablePanel>
 					</ResizablePanelGroup>
 				</ResizablePanel>

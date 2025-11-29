@@ -21,6 +21,7 @@ import type { Id } from "../../convex/_generated/dataModel";
 export const useTimeline = (projectId?: string) => {
 	const [timeline, setTimeline] = useState<TimelineState>({
 		// id: "main",
+		resolution: "4k", // Default to 4K
 		tracks: [
 			{ id: "track-1", scrubbers: [], transitions: [] },
 			{ id: "track-2", scrubbers: [], transitions: [] },
@@ -534,6 +535,13 @@ export const useTimeline = (projectId?: string) => {
 		},
 		[]
 	);
+
+	const setResolution = useCallback((resolution: "4k" | "shorts") => {
+		setTimeline((prev) => ({
+			...prev,
+			resolution,
+		}));
+	}, []);
 
 	// Helper function to recursively generate new UUIDs for grouped scrubbers and their transitions
 	const generateNewUUIDsForGroupedScrubbers = useCallback((
@@ -1713,6 +1721,7 @@ export const useTimeline = (projectId?: string) => {
 		getConnectedElements,
 		handleUpdateScrubberWithLocking,
 		setTimelineFromServer,
+		setResolution,
 		// Undo/redo
 		undo,
 		redo,
